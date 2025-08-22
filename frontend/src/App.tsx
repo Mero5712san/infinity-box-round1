@@ -19,7 +19,7 @@ const App: React.FC = () => {
           <Route path="/add" element={<AddEditProductPage />} />
           <Route path="/edit/:id" element={<AddEditProductPage />} />
           <Route path="/upload" element={<Upload />} />
-          <Route path="/vd" element={<VariantDetail variantId={1} productId={1} />} />
+          <Route path="/photoupload" element={<VariantDetail variantId={1} productId={1} />} />
         </Routes>
       </div>
 

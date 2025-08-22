@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import "./prodlist.css";
+
 interface Product {
     id: number;
     name: string;
@@ -29,13 +30,12 @@ const ProductList: React.FC<Props> = ({ products, onDelete }) => {
                     {products.map((p) => (
                         <tr key={p.id}>
                             <td>{p.name}</td>
-                            <td>{(2)}</td>
+                            <td>{p.price}</td>
                             <td>{p.description}</td>
                             <td className="actions">
                                 <Link to={`/edit/${p.id}`} className="btn edit">Edit</Link>
-                                <button onClick={() => onDelete(p.id)} className="btn delete">
-                                    Delete
-                                </button>
+                                <Link to={`/photoupload`} className="btn upload">Upload</Link>
+                                <button onClick={() => onDelete(p.id)} className="btn delete">Delete</button>
                             </td>
                         </tr>
                     ))}

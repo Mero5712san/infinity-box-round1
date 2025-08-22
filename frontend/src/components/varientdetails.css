@@ -1,0 +1,108 @@
+.photo-upload-card {
+    border: 1px solid #e0e0e0;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 420px;
+    margin: 3rem auto;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    background: linear-gradient(145deg, #ffffff, #f3f3f3);
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+}
+
+.photo-upload-card:hover {
+    /* transform: translateY(-6px); */
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+}
+
+.photo-upload-title {
+    font-size: 1.7rem;
+    margin-bottom: 1.5rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.photo-upload-preview {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid #684caf;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    /* transition: transform 0.2s; */
+}
+
+.photo-upload-preview:hover {
+    transform: scale(1.05);
+}
+
+.photo-upload-input {
+    padding: 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    width: 100%;
+    margin-bottom: 1rem;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+.photo-upload-input:focus {
+    outline: none;
+    border-color: #4c56af;
+    box-shadow: 0 0 6px #604caf;
+}
+
+.photo-upload-btn {
+    background: linear-gradient(90deg, #4c4faf, #6669bb);
+    color: white;
+    border: none;
+    padding: 0.65rem 1.5rem;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+}
+
+.photo-upload-btn:hover {
+    background: linear-gradient(90deg, #6645a0, #795cb8);
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+.photo-upload-message {
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: #555;
+    font-weight: 500;
+}
+.photo-upload-file {
+    margin-bottom: 1rem;
+}
+
+.file-label {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(90deg, #4caf50, #66bb6a);
+    color: white;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+    font-size: 1rem;
+}
+
+.file-label:hover {
+    background: linear-gradient(90deg, #45a049, #5cb85c);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* hide the actual file input */
+.file-label input[type="file"] {
+    display: none;
+}

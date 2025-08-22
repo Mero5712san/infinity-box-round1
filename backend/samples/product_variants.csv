@@ -1,0 +1,6 @@
+product_code,variant_sku,attributes_json
+PLT,"PLT-WHT-6IN","{""color"":""white"",""diameter_in"":6}"
+PLT,"PLT-BLK-12IN","{""color"":""black"",""diameter_in"":12}"
+PLT,"PLT-BLU-7IN","{""color"":""blue"",""diameter_in"":7}"
+BWL,"BWL-CLR-500","{""color"":""clear"",""volume_ml"":500}"
+BWL,"BWL-RED-1000","{""color"":""red"",""volume_ml"":1000}"

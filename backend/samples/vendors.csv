@@ -1,0 +1,10 @@
+vendor_code,name,gstin,contact_info,rating,active
+V_A,Vendor A,27ABCDE1234F1Z5,{"phone":"+91-90..."},4.5,true
+V_B,Vendor B,29PQRSX5678Z9A1,{"email":"b@example.com"},4.1,true
+V_C,Vendor C,27ZZZZZ0000Z1Z1,{"phone":"+91-80..."},3.9,true
+V_D,Vendor D,,,,true
+V_E,Vendor E,,,,true
+V_F,Vendor F,,,,true
+V_G,Vendor G,,,,true
+V_H,Vendor H,,,,true
+V_I,Vendor I,,,,true

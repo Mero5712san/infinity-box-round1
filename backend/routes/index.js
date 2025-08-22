@@ -28,7 +28,7 @@ router.put('/products/:id', productCtrl.updateProduct);
 router.delete('/products/:id', productCtrl.deleteProduct);
 
 // variants -> vendors/prices
-router.get('/variants/:id/vendors', variantCtrl.getVariantVendors);
+router.get('/variants/:sku/vendors', variantCtrl.getVariantVendors);
 
 // categories / subcategories / vendors
 router.get('/categories', categoryCtrl.getAllCategories);

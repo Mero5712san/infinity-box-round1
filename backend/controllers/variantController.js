@@ -1,35 +1,45 @@
-// controllers/variantController.js
-import { VendorListing, Vendor, VendorPrice, ProductVariant } from '../models/index.js';
-import { Op } from 'sequelize';
+import { sequelize } from '../models/index.js';
+import { QueryTypes } from 'sequelize';
 
-// GET /variants/:id/vendors
 export const getVariantVendors = async (req, res) => {
-    const { id } = req.params;
+    const variantSku = req.params.sku; // pass variant SKU like PLT-WHT-6IN
+    if (!variantSku) return res.status(400).json({ error: 'variant SKU required' });
+
     try {
-        const listings = await VendorListing.findAll({
-            where: { variant_id: id },
-            include: [{ model: Vendor }, { model: VendorPrice, required: false }]
+        const sql = `
+            SELECT v.id AS vendor_id, v.vendor_code, v.name AS vendor_name,
+                   vl.vendor_sku, vl.pack_size, vp.price, vp.effective_from
+            FROM vendor_listings vl
+            JOIN product_variants pv ON pv.id = vl.variant_id
+            JOIN vendors v ON v.id = vl.vendor_id
+            LEFT JOIN vendor_prices vp 
+                ON vp.vendor_listing_id = vl.id
+               AND vp.effective_from = (
+                    SELECT MAX(vp2.effective_from)
+                    FROM vendor_prices vp2
+                    WHERE vp2.vendor_listing_id = vl.id AND vp2.effective_from <= CURDATE()
+                )
+            WHERE pv.variant_sku = :variant_sku
+            ORDER BY vp.price ASC;
+        `;
+
+        const rows = await sequelize.query(sql, {
+            replacements: { variant_sku: variantSku },
+            type: QueryTypes.SELECT
         });
 
-        const vendors = listings.map(l => {
-            const prices = (l.VendorPrices || []).filter(p => new Date(p.effective_from) <= new Date());
-            const latest = prices.sort((a, b) => new Date(b.effective_from) - new Date(a.effective_from))[0] || null;
-            const price = latest ? parseFloat(latest.price) : null;
-            const pack = parseFloat(l.pack_size);
-            return {
-                vendor_id: l.Vendor?.id || null,
-                vendor_name: l.Vendor?.name || null,
-                vendor_sku: l.vendor_sku || null,
-                price,
-                pack_size: pack || null,
-                price_per_unit: price && pack ? price / pack : null,
-                min_order_qty: l.min_order_qty,
-                lead_time_days: l.lead_time_days
-            };
-        }).sort((a, b) => (a.price_per_unit ?? Number.POSITIVE_INFINITY) - (b.price_per_unit ?? Number.POSITIVE_INFINITY));
+        const vendors = rows.map(r => ({
+            vendor_id: r.vendor_id,
+            vendor_code: r.vendor_code,
+            vendor_name: r.vendor_name,
+            vendor_sku: r.vendor_sku,
+            pack_size: r.pack_size,
+            price: r.price !== null ? parseFloat(r.price) : null
+        }));
 
         res.json(vendors);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('getVariantVendors error', err);
+        res.status(500).json({ error: 'Failed to fetch vendors' });
     }
 };

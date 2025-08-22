@@ -2,42 +2,47 @@
 import { Product, ProductVariant, VariantAttribute, AttributeDef, VendorListing, VendorPrice } from '../models/index.js';
 import { Op } from 'sequelize';
 
-// GET /search/variants?product=PLT&color=white&size=6
 export const searchVariants = async (req, res) => {
-    const { q = '', product_code, color, size } = req.query;
+    const { q = "", product_code, color, size } = req.query;
+
     try {
-        const whereProduct = {};
-        if (product_code) whereProduct.product_code = product_code;
-        if (q) whereProduct[Op.or] = [{ name: { [Op.like]: `%${q}%` } }, { product_code: { [Op.like]: `%${q}%` } }];
-
-        const attrIncludes = [];
-        if (color) {
-            attrIncludes.push({
-                model: VariantAttribute,
-                required: true,
-                include: [{ model: AttributeDef, where: { name: 'color' } }],
-                where: { value_text: color }
-            });
-        }
-        if (size) {
-            attrIncludes.push({
-                model: VariantAttribute,
-                required: true,
-                include: [{ model: AttributeDef, where: { name: { [Op.in]: ['diameter_in', 'volume_ml'] } } }],
-                where: { value_text: size }
-            });
-        }
-
+        // Fetch all variants with Product included
         const variants = await ProductVariant.findAll({
-            include: [
-                { model: Product, where: whereProduct },
-                ...attrIncludes,
-                { model: VendorListing, include: [{ model: VendorPrice }], required: false }
-            ]
+            include: [{ model: Product }],
         });
 
-        res.json(variants);
+        // Filter in JS
+        const filtered = variants.filter((v) => {
+            let match = true;
+
+            // Product name/code filter
+            if (q && !v.Product.name.toLowerCase().includes(q.toLowerCase()) &&
+                !v.Product.product_code.toLowerCase().includes(q.toLowerCase())) {
+                match = false;
+            }
+
+            if (product_code && v.Product.product_code.toLowerCase() !== product_code.toLowerCase()) {
+                match = false;
+            }
+
+            // Attributes filter
+            let attributes = {};
+            if (v.attributes_json) {
+                try {
+                    attributes = JSON.parse(v.attributes_json);
+                } catch (e) { }
+            }
+
+            if (color && attributes.color?.toLowerCase() !== color.toLowerCase()) match = false;
+            if (size && !(attributes.diameter_in == size || attributes.volume_ml == size)) match = false;
+
+            return match;
+        });
+
+        res.json(filtered);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("searchVariants error:", err);
+        res.status(500).json({ error: "Search failed" });
     }
 };
+

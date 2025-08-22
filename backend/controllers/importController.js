@@ -1,6 +1,7 @@
 // controllers/importController.js
 import csv from 'csv-parser';
 import fs from 'fs';
+import { Op } from 'sequelize';
 import {
     Category, Subcategory, Product, AttributeDef, ProductVariant,
     VariantAttribute, Vendor, VendorListing, VendorPrice,
@@ -16,6 +17,11 @@ const parseCSV = filePath => new Promise((resolve, reject) => {
         .on('error', reject);
 });
 
+const safeJSON = (s) => {
+    if (!s) return {};
+    try { return JSON.parse(s); } catch { return {}; }
+};
+
 export const importCSV = async (req, res) => {
     const entity = req.params.entity;
     const file = req.file;
@@ -24,31 +30,37 @@ export const importCSV = async (req, res) => {
     const filePath = file.path;
     try {
         const rows = await parseCSV(filePath);
-        let inserted = 0, updated = 0, errors = [];
+        let inserted = 0, updated = 0;
+        const errors = [];
 
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
             try {
                 switch (entity) {
                     case 'categories': {
-                        const [inst, created] = await Category.upsert({ name: row.name });
+                        const [instance, created] = await Category.upsert({ name: row.name.trim() });
                         created ? inserted++ : updated++;
                         break;
                     }
                     case 'subcategories': {
-                        const cat = await Category.findOne({ where: { name: row.category_name } });
+                        if (!row.category_name) throw new Error('category_name required');
+                        const cat = await Category.findOne({ where: { name: row.category_name.trim() } });
                         if (!cat) throw new Error(`Category not found: ${row.category_name}`);
-                        const [inst, created] = await Subcategory.upsert({ name: row.subcategory_name || row.name, category_id: cat.id });
+                        const name = (row.subcategory_name || row.name || '').trim();
+                        if (!name) throw new Error('subcategory_name required');
+                        const [instance, created] = await Subcategory.upsert({ name, category_id: cat.id });
                         created ? inserted++ : updated++;
                         break;
                     }
                     case 'products': {
-                        const subcat = await Subcategory.findOne({ where: { name: row.subcategory_name } });
+                        if (!row.subcategory_name) throw new Error('subcategory_name required');
+                        const subcat = await Subcategory.findOne({ where: { name: row.subcategory_name.trim() } });
                         if (!subcat) throw new Error(`Subcategory not found: ${row.subcategory_name}`);
-                        const [inst, created] = await Product.upsert({
-                            product_code: row.product_code,
-                            name: row.product_name,
-                            description: row.description,
+                        if (!row.product_code) throw new Error('product_code required');
+                        const [instance, created] = await Product.upsert({
+                            product_code: row.product_code.trim(),
+                            name: (row.product_name || '').trim(),
+                            description: row.description || null,
                             default_uom: row.default_uom || 'unit',
                             subcategory_id: subcat.id
                         });
@@ -56,19 +68,25 @@ export const importCSV = async (req, res) => {
                         break;
                     }
                     case 'attribute_defs': {
-                        const [inst, created] = await AttributeDef.upsert({ name: row.name, value_type: row.value_type || 'text' });
+                        if (!row.name) throw new Error('attribute name required');
+                        const [instance, created] = await AttributeDef.upsert({
+                            name: row.name.trim(),
+                            value_type: row.value_type && row.value_type.trim() === 'number' ? 'number' : 'text'
+                        });
                         created ? inserted++ : updated++;
                         break;
                     }
                     case 'product_variants': {
-                        const prod = await Product.findOne({ where: { product_code: row.product_code } });
+                        if (!row.product_code) throw new Error('product_code required');
+                        if (!row.variant_sku) throw new Error('variant_sku required');
+                        const prod = await Product.findOne({ where: { product_code: row.product_code.trim() } });
                         if (!prod) throw new Error(`Product not found: ${row.product_code}`);
-                        await ProductVariant.upsert({ variant_sku: row.variant_sku, product_id: prod.id });
-                        const variant = await ProductVariant.findOne({ where: { variant_sku: row.variant_sku } });
-                        if (!variant) throw new Error(`Variant creation failed: ${row.variant_sku}`);
+                        await ProductVariant.upsert({ variant_sku: row.variant_sku.trim(), product_id: prod.id });
+                        const variant = await ProductVariant.findOne({ where: { variant_sku: row.variant_sku.trim() } });
+                        if (!variant) throw new Error(`Failed to find/create variant: ${row.variant_sku}`);
                         if (row.attributes_json) {
                             let attrs;
-                            try { attrs = JSON.parse(row.attributes_json); } catch (e) { throw new Error('Invalid attributes_json'); }
+                            try { attrs = JSON.parse(row.attributes_json); } catch (e) { throw new Error('attributes_json invalid JSON'); }
                             for (const [k, v] of Object.entries(attrs)) {
                                 let def = await AttributeDef.findOne({ where: { name: k } });
                                 if (!def) def = await AttributeDef.create({ name: k, value_type: typeof v === 'number' ? 'number' : 'text' });
@@ -79,11 +97,11 @@ export const importCSV = async (req, res) => {
                         break;
                     }
                     case 'vendors': {
-                        let contact = {};
-                        try { contact = row.contact_info ? JSON.parse(row.contact_info) : {}; } catch (e) { contact = {}; }
-                        const [inst, created] = await Vendor.upsert({
-                            vendor_code: row.vendor_code,
-                            name: row.name,
+                        if (!row.vendor_code) throw new Error('vendor_code required');
+                        const contact = safeJSON(row.contact_info);
+                        const [instance, created] = await Vendor.upsert({
+                            vendor_code: row.vendor_code.trim(),
+                            name: (row.name || '').trim(),
                             gstin: row.gstin || null,
                             contact_info: contact,
                             rating: row.rating ? parseFloat(row.rating) : null,
@@ -93,15 +111,21 @@ export const importCSV = async (req, res) => {
                         break;
                     }
                     case 'vendor_listings': {
-                        const variant = await ProductVariant.findOne({ where: { variant_sku: row.variant_sku } });
-                        const vendor = await Vendor.findOne({ where: { vendor_code: row.vendor_code } });
+                        if (!row.variant_sku) throw new Error('variant_sku required');
+                        if (!row.vendor_code) throw new Error('vendor_code required');
+                        if (!row.pack_size) throw new Error('pack_size required');
+                        const variant = await ProductVariant.findOne({ where: { variant_sku: row.variant_sku.trim() } });
+                        const vendor = await Vendor.findOne({ where: { vendor_code: row.vendor_code.trim() } });
                         if (!variant) throw new Error(`Variant not found: ${row.variant_sku}`);
                         if (!vendor) throw new Error(`Vendor not found: ${row.vendor_code}`);
+                        const pack_size = parseFloat(row.pack_size);
+                        if (!isFinite(pack_size) || pack_size <= 0) throw new Error('pack_size must be > 0');
+                        const vendorSku = (row.vendor_sku || '').trim();
                         const [inst, created] = await VendorListing.upsert({
                             variant_id: variant.id,
                             vendor_id: vendor.id,
-                            vendor_sku: row.vendor_sku,
-                            pack_size: parseFloat(row.pack_size),
+                            vendor_sku: vendorSku,
+                            pack_size: pack_size,
                             currency: row.currency || 'INR',
                             min_order_qty: row.min_order_qty ? parseInt(row.min_order_qty) : 0,
                             lead_time_days: row.lead_time_days ? parseInt(row.lead_time_days) : 0
@@ -110,23 +134,27 @@ export const importCSV = async (req, res) => {
                         break;
                     }
                     case 'vendor_prices': {
-                        const vendor = await Vendor.findOne({ where: { vendor_code: row.vendor_code } });
-                        if (!vendor) throw new Error(`Vendor not found: ${row.vendor_code}`);
-                        const listing = await VendorListing.findOne({ where: { vendor_id: vendor.id, vendor_sku: row.vendor_sku } });
-                        if (!listing) throw new Error(`Listing not found for ${row.vendor_sku}`);
-                        const priceVal = parseFloat(row.price);
-                        if (!priceVal || priceVal <= 0) throw new Error('Invalid price');
+                        if (!row.vendor_code) throw new Error('vendor_code required');
+                        if (!row.vendor_sku) throw new Error('vendor_sku required');
+                        if (!row.price) throw new Error('price required');
                         if (!row.effective_from) throw new Error('effective_from required');
-                        await VendorPrice.create({ vendor_listing_id: listing.id, price: priceVal, effective_from: row.effective_from });
+                        const vendor = await Vendor.findOne({ where: { vendor_code: row.vendor_code.trim() } });
+                        if (!vendor) throw new Error(`Vendor not found: ${row.vendor_code}`);
+                        const listing = await VendorListing.findOne({ where: { vendor_id: vendor.id, vendor_sku: row.vendor_sku.trim() } });
+                        if (!listing) throw new Error(`Vendor listing not found for ${row.vendor_sku}`);
+                        const price = parseFloat(row.price);
+                        if (!isFinite(price) || price <= 0) throw new Error('price must be > 0');
+                        await VendorPrice.create({ vendor_listing_id: listing.id, price, effective_from: row.effective_from });
                         inserted++;
                         break;
                     }
                     case 'product_photos': {
-                        const prod = await Product.findOne({ where: { product_code: row.product_code } });
+                        if (!row.product_code || !row.url) throw new Error('product_code and url required');
+                        const prod = await Product.findOne({ where: { product_code: row.product_code.trim() } });
                         if (!prod) throw new Error(`Product not found: ${row.product_code}`);
                         const [inst, created] = await ProductPhoto.upsert({
                             product_id: prod.id,
-                            url: row.url,
+                            url: row.url.trim(),
                             is_primary: String(row.is_primary).toLowerCase() === 'true',
                             alt_text: row.alt_text || null
                         });
@@ -134,11 +162,12 @@ export const importCSV = async (req, res) => {
                         break;
                     }
                     case 'variant_photos': {
-                        const variant = await ProductVariant.findOne({ where: { variant_sku: row.variant_sku } });
+                        if (!row.variant_sku || !row.url) throw new Error('variant_sku and url required');
+                        const variant = await ProductVariant.findOne({ where: { variant_sku: row.variant_sku.trim() } });
                         if (!variant) throw new Error(`Variant not found: ${row.variant_sku}`);
                         const [inst, created] = await VariantPhoto.upsert({
                             variant_id: variant.id,
-                            url: row.url,
+                            url: row.url.trim(),
                             is_primary: String(row.is_primary).toLowerCase() === 'true',
                             alt_text: row.alt_text || null
                         });
@@ -146,14 +175,14 @@ export const importCSV = async (req, res) => {
                         break;
                     }
                     default:
-                        throw new Error('Unknown entity for import');
+                        throw new Error(`Unknown import entity: ${entity}`);
                 }
             } catch (err) {
-                errors.push({ rowNumber: i + 1, msg: err.message, row });
+                errors.push({ rowNumber: i + 1, row, msg: err.message });
             }
-        }
+        } // end for
 
-        try { fs.unlinkSync(filePath); } catch (e) { /* ignore cleanup errors */ }
+        try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
         return res.json({ inserted, updated, errors });
     } catch (err) {
         try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }

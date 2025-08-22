@@ -1,0 +1,3 @@
+variant_sku,url,is_primary,alt_text
+PLT-WHT-6IN,https://cdn.example/plate_white_6in.jpg,true,White plate 6 inch
+PLT-BLK-12IN,https://cdn.example/plate_black_12in.jpg,true,Black plate 12 inch

@@ -1,4 +1,4 @@
-Project Overview
+**Project Overview**
 
 This dashboard allows non-technical staff to manage products, variants, vendors, and pricing efficiently.
 

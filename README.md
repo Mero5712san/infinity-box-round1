@@ -1,4 +1,4 @@
-**Project Overview**
+# Project Overview
 
 This dashboard allows non-technical staff to manage products, variants, vendors, and pricing efficiently.
 
@@ -10,7 +10,7 @@ Automatically surfaces the cheapest vendor per variant.
 
 Photo mapping at product and variant levels (variant photos override product photos).
 
-Performance Goals:
+# Performance Goals:
 
 Import ≥100 products with variants in ≤30 minutes via CSV.
 
@@ -18,7 +18,7 @@ Search results return in <2 seconds for typical queries.
 
 Each product supports ≥3 colors × ≥5 sizes × ≥10 vendors.
 
-Tech Stack
+# Tech Stack
 
 Backend: Node.js + Express, Sequelize ORM
 
@@ -30,7 +30,7 @@ Storage: Local storage for images (URLs stored in DB)
 
 Optional: Redis for caching (not implemented for MVP)
 
-Setup Instructions
+# Setup Instructions
 
 Clone the repo:
 
@@ -42,18 +42,18 @@ Backend Setup:
 
 cd backend
 npm install
-# Create .env with DB credentials and ADMIN_TOKEN
+Create .env with DB credentials and ADMIN_TOKEN
 npm run dev
 
 
-Frontend Setup:
+# Frontend Setup:
 
 cd frontend
 npm install
 npm start
 
 
-Database:
+# Database:
 
 Run the SQL scripts in /db/schema.sql to create tables.
 
@@ -77,7 +77,7 @@ vendors → vendor_listings → vendor_prices (variant-level pricing)
 
 Photos: product_photos, variant_photos, optional vendor_listing_photos
 
-ERD:
+# ERD:
 
 (include your ERD image here)
 
@@ -89,7 +89,7 @@ Historical prices separated in vendor_prices for audit and analytics.
 
 Indexed attributes and variant/vendor fields for fast search and cheapest vendor queries.
 
-CSV Import & Sample Data
+# CSV Import & Sample Data
 
 Entities: categories, subcategories, products, attribute_defs, product_variants, variant_attributes, vendors, vendor_listings, vendor_prices, product_photos, variant_photos.
 
@@ -99,7 +99,7 @@ Idempotency: Re-importing the same CSV updates existing rows without creating du
 
 Validation: Reject rows with invalid pack_size or price, return detailed row-level error messages.
 
-API Endpoints
+# API Endpoints
 
 GET /products?search=&subcategory=&limit=&offset=
 
@@ -111,7 +111,7 @@ POST /import/:entity → CSV upload, returns { inserted, updated, errors:[{row,m
 
 POST /upload/photo → upload file, returns { url }
 
-UI & Features
+# UI & Features
 
 Upload Center: Preview, validate, and upsert CSV data.
 
@@ -123,7 +123,7 @@ Search: Free-text across product name/code, variant SKU, vendor name/SKU with at
 
 Dashboard Charts: Products per Category, Variants per Vendor, Total counts.
 
-Validation Rules
+# Validation Rules
 
 Unique keys: product_code, variant_sku, vendor_code, (variant_id, vendor_id).
 
@@ -133,7 +133,7 @@ Current price only counts rows with effective_from ≤ today.
 
 Idempotent CSV import.
 
-AI Usage Log
+# AI Usage Log
 
 Tools Used: ChatGPT + GitHub Copilot for scaffolding backend routes, generating sample CSVs, and frontend components.
 
@@ -151,7 +151,7 @@ Auth is a single admin token; RBAC can be added for production.
 
 Performance acceptable for ≤500 products with multiple variants/vendors; Redis caching optional for larger scale.
 
-Demo Walkthrough
+# Demo Walkthrough
 
 Step 1: Import CSVs → check console summary.
 
